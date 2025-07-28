@@ -1,7 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch'); // MUST be node-fetch@2!
 const router = express.Router();
-const Device = require('../models/device'); // Adjust path if needed
+const Device = require('../models/UserDevice');
 
 // Send push notification to Expo
 async function sendPushToDevices(tokens, title, body, data) {
