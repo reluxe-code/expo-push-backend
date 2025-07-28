@@ -68,4 +68,24 @@ router.post('/register-device', async (req, res) => {
   }
 });
 
+// Bulk push: send to all devices
+router.post('/send-bulk-push', async (req, res) => {
+  try {
+    const { title, body, data } = req.body;
+    // Get all device tokens from the database
+    const devices = await Device.find({});
+    const tokens = devices.map(d => d.token).filter(Boolean);
+    if (!tokens.length) {
+      return res.status(404).json({ error: 'No device tokens found.' });
+    }
+    const result = await sendPushToDevices(tokens, title, body, data);
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 module.exports = router;
