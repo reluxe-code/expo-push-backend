@@ -1,65 +1,70 @@
-const fetch = require('node-fetch');
 const express = require('express');
-const UserDevice = require('../models/UserDevice');
+const fetch = require('node-fetch'); // MUST be node-fetch@2!
 const router = express.Router();
+const Device = require('../models/device'); // Adjust path if needed
 
-async function sendPushToDevices(messages) {
-  await fetch('https://exp.host/--/api/v2/push/send', {
+// Send push notification to Expo
+async function sendPushToDevices(tokens, title, body, data) {
+  const messages = tokens.map(token => ({
+    to: token,
+    sound: "default",
+    title,
+    body,
+    data,
+  }));
+
+  const response = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(messages),
   });
+  const result = await response.json();
+  return result;
 }
 
-// Send personalized push
+// Send push by phone/email/token
 router.post('/send-push', async (req, res) => {
-  const { by = "phone", value, title, body, data } = req.body;
-  let users;
-  if (by === "email") {
-    users = await UserDevice.find({ email: value });
-  } else if (by === "deviceID") {
-    users = await UserDevice.find({ deviceID: value });
-  } else {
-    users = await UserDevice.find({ phone: value });
-  }
+  try {
+    const { by, value, title, body, data } = req.body;
+    let devices;
 
-  const messages = users
-    .map(user => ({
-      to: user.token,
-      sound: "default",
-      title,
-      body,
-      data,
-    }))
-    .filter(msg => msg.to);
+    if (by === 'phone') {
+      devices = await Device.find({ phone: value });
+    } else if (by === 'email') {
+      devices = await Device.find({ email: value });
+    } else if (by === 'token') {
+      devices = [{ token: value }];
+    } else {
+      return res.status(400).json({ error: 'Invalid "by" parameter.' });
+    }
 
-  if (messages.length) {
-    await sendPushToDevices(messages);
-    res.json({ success: true, count: messages.length });
-  } else {
-    res.json({ success: false, error: 'No users found' });
+    const tokens = devices.map(d => d.token).filter(Boolean);
+    if (!tokens.length) {
+      return res.status(404).json({ error: 'No device tokens found.' });
+    }
+
+    const result = await sendPushToDevices(tokens, title, body, data);
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Send bulk push
-router.post('/send-bulk-push', async (req, res) => {
-  const { title, body, data } = req.body;
-  const users = await UserDevice.find({});
-  const messages = users
-    .map(user => ({
-      to: user.token,
-      sound: "default",
-      title,
-      body,
-      data,
-    }))
-    .filter(msg => msg.to);
+// (Example: Register device endpoint)
+router.post('/register-device', async (req, res) => {
+  try {
+    const { token, phone, email, deviceID } = req.body;
+    if (!token || !deviceID) return res.status(400).json({ error: 'token and deviceID required' });
 
-  if (messages.length) {
-    await sendPushToDevices(messages);
-    res.json({ success: true, count: messages.length });
-  } else {
-    res.json({ success: false, error: 'No users found' });
+    await Device.findOneAndUpdate(
+      { deviceID },
+      { token, phone, email },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
