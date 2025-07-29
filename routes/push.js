@@ -1,8 +1,8 @@
+const PushLog = require('../models/PushLog');
 const express = require('express');
 const fetch = require('node-fetch'); // MUST be node-fetch@2!
 const router = express.Router();
 const Device = require('../models/UserDevice');
-const PushLog = require('../models/PushLog');
 
 // Send push notification to Expo
 async function sendPushToDevices(tokens, title, body, data, image) {
