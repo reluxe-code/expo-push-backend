@@ -120,6 +120,17 @@ router.post('/send-bulk-push', async (req, res) => {
   }
 });
 
+// List all registered devices (for admin dashboard)
+router.get('/devices', async (req, res) => {
+  try {
+    const devices = await Device.find().sort({ updatedAt: -1 }).limit(100);
+    res.json({ devices });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // GET /logs - Push history
 router.get('/logs', async (req, res) => {
   try {
