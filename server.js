@@ -1,4 +1,5 @@
 // server.js
+// NEW
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -12,9 +13,9 @@ const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/expo-push'
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use(registerDeviceRouter); // POST /register-device
-app.use(pushRouter);           // POST /send-push, POST /send-bulk-push
+// --- Mount all routes at root ---
+app.use('/', registerDeviceRouter); // Handles /register-device (and could handle / if needed)
+app.use('/', pushRouter);           // Handles /send-push, /send-bulk-push, /logs
 
 mongoose.connect(MONGO_URL)
   .then(() => {
